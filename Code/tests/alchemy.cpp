@@ -1,9 +1,13 @@
+#include <TiltedCore/Stl.hpp>
+#include <TiltedCore/Allocator.hpp>
 #include <TiltedCore/Buffer.hpp>
 #include <TiltedCore/Serialization.hpp>
 
-#include <Structs/Inventory.h>
-
+#include <functional>
+#include <optional>
 #include <utility>
+
+#include <Structs/Inventory.h>
 
 #include <catch2/catch.hpp>
 

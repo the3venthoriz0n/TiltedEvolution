@@ -1,5 +1,8 @@
 #pragma once
 
+#include <functional>
+#include <optional>
+
 #include "MagicEquipment.h"
 
 using TiltedPhoques::Buffer;
