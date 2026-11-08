@@ -25,6 +25,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends build-essential
 WORKDIR /src
 COPY . /src
 
+# Optional: make `git describe --tags` (used for the build/version string) report an exact tag, so a
+# patched server still matches stock clients of that version (the client refuses mismatched versions).
+ARG VERSION_OVERRIDE
+RUN if [ -n "$VERSION_OVERRIDE" ]; then git -C /src tag -f "$VERSION_OVERRIDE"; fi
+
 RUN --mount=type=cache,target=/root/.xmake/packages \
     --mount=type=cache,target=/root/.xmake/repositories \
     source ~/.xmake/profile && \

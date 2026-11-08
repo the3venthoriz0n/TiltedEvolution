@@ -46,6 +46,7 @@ jobs:
           platforms: linux/amd64
           build-args: |
             GITHUB_ACTIONS=true
+            VERSION_OVERRIDE=v1.8.4
           push: true
           tags: ${{ env.IMAGE }}:patched
           cache-from: type=gha
