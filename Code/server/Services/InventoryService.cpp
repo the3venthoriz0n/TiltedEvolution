@@ -15,6 +15,8 @@
 namespace
 {
 Console::Setting bEnableItemDrops{"Gameplay:bEnableItemDrops", "(Experimental) Syncs dropped items by players", false};
+Console::Setting bAllowPlayerInventoryTransfers{"Gameplay:bAllowPlayerInventoryTransfers",
+    "Allow players in the same party and in range of each other to move items into each other's inventories (needed by player trading mods)", false};
 }
 
 InventoryService::InventoryService(World& aWorld, entt::dispatcher& aDispatcher)
@@ -60,6 +62,35 @@ void InventoryService::OnInventoryChanges(const PacketEvent<RequestInventoryChan
             // to the currently visible incarnation of that NPC.
             isRemoteNpcInteraction = pOwner && pCharacterComponent && pCellComponent && !pCharacterComponent->IsPlayer()
                 && acMessage.pPlayer->GetCellComponent().IsInRange(*pCellComponent, pCharacterComponent->IsDragon());
+
+            // Opt-in: let a party member in range change another player's inventory, so that
+            // player-to-player trading can use the normal inventory sync (which preserves
+            // enchantments, tempering, charge, poison and soul size). The owner's client applies the
+            // resulting NotifyInventoryChanges to their own character.
+            const bool isPlayerTarget = pOwner && pCharacterComponent && pCellComponent && pCharacterComponent->IsPlayer();
+            if (!isRemoteNpcInteraction && isPlayerTarget)
+            {
+                const auto& senderParty = acMessage.pPlayer->GetParty();
+                const auto& ownerParty = pOwner->GetParty();
+                const bool sameParty = senderParty.JoinedPartyId && ownerParty.JoinedPartyId
+                    && *senderParty.JoinedPartyId == *ownerParty.JoinedPartyId;
+                const bool inRange = acMessage.pPlayer->GetCellComponent().IsInRange(*pCellComponent, false);
+
+                if (bAllowPlayerInventoryTransfers && sameParty && inRange)
+                {
+                    isRemoteNpcInteraction = true;
+                    spdlog::info(
+                        "Allowed player-to-player inventory change: player {:X} -> player {:X}, item {:X}, count {}",
+                        acMessage.pPlayer->GetId(), pOwner->GetId(), message.Item.BaseId.BaseId, message.Item.Count);
+                }
+                else
+                {
+                    spdlog::info(
+                        "Rejected player-to-player inventory change: player {:X} -> player {:X}, item {:X}, count {} (allowSetting={}, sameParty={}, inRange={})",
+                        acMessage.pPlayer->GetId(), pOwner->GetId(), message.Item.BaseId.BaseId, message.Item.Count,
+                        static_cast<bool>(bAllowPlayerInventoryTransfers), sameParty, inRange);
+                }
+            }
 
             if (!isRemoteNpcInteraction)
             {
