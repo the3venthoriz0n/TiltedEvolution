@@ -1064,10 +1064,8 @@ void TP_MAKE_THISCALL(HookAddInventoryItem, Actor, TESBoundObject* apItem, Extra
 {
     if (!ScopedInventoryOverride::IsOverriden())
     {
-        auto& modSystem = World::Get().GetModSystem();
-
         Inventory::Entry item{};
-        modSystem.GetServerModId(apItem->formID, item.BaseId);
+        AlchemySync::SetEntryBase(item, apItem);
         item.Count = aCount;
 
         if (apExtraData)
@@ -1083,10 +1081,8 @@ void* TP_MAKE_THISCALL(HookPickUpObject, Actor, TESObjectREFR* apObject, int32_t
 {
     if (!ScopedInventoryOverride::IsOverriden())
     {
-        auto& modSystem = World::Get().GetModSystem();
-
         Inventory::Entry item{};
-        modSystem.GetServerModId(apObject->baseForm->formID, item.BaseId);
+        AlchemySync::SetEntryBase(item, apObject->baseForm);
         item.Count = aCount;
 
         if (apObject->GetExtraDataList())
@@ -1109,10 +1105,8 @@ void Actor::PickUpObject(TESObjectREFR* apObject, int32_t aCount, bool aUnk1, fl
 
 void* TP_MAKE_THISCALL(HookDropObject, Actor, void* apResult, TESBoundObject* apObject, ExtraDataList* apExtraData, int32_t aCount, NiPoint3* apLocation, NiPoint3* apRotation)
 {
-    auto& modSystem = World::Get().GetModSystem();
-
     Inventory::Entry item{};
-    modSystem.GetServerModId(apObject->formID, item.BaseId);
+    AlchemySync::SetEntryBase(item, apObject);
     item.Count = -aCount;
 
     if (apExtraData)
@@ -1131,8 +1125,17 @@ void Actor::DropOrPickUpObject(const Inventory::Entry& arEntry, NiPoint3* apLoca
 
     ModSystem& modSystem = World::Get().GetModSystem();
 
-    uint32_t objectId = modSystem.GetGameId(arEntry.BaseId);
-    TESBoundObject* pObject = Cast<TESBoundObject>(TESForm::GetById(objectId));
+    TESBoundObject* pObject = nullptr;
+    if (arEntry.AlchemyInfo.IsPresent())
+    {
+        pObject = AlchemySync::ResolveItem(arEntry.AlchemyInfo, false);
+    }
+    else
+    {
+        uint32_t objectId = modSystem.GetGameId(arEntry.BaseId);
+        pObject = Cast<TESBoundObject>(TESForm::GetById(objectId));
+    }
+
     if (!pObject)
     {
         spdlog::warn("Object to drop not found, {:X}:{:X}.", arEntry.BaseId.ModId, arEntry.BaseId.BaseId);

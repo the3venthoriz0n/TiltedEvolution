@@ -19,6 +19,7 @@
 #include <Games/TES.h>
 #include <Games/References.h>
 #include <Forms/TESWorldSpace.h>
+#include <Forms/AlchemyItem.h>
 
 #include <Forms/TESObjectCELL.h>
 #include <Games/Skyrim/CellRespawnOverrides.h>
@@ -164,10 +165,8 @@ void PlayerCharacter::RemoveWaypoint() noexcept
 
 char TP_MAKE_THISCALL(HookPickUpObject, PlayerCharacter, TESObjectREFR* apObject, int32_t aCount, bool aUnk1, bool aUnk2)
 {
-    auto& modSystem = World::Get().GetModSystem();
-
     Inventory::Entry item{};
-    modSystem.GetServerModId(apObject->baseForm->formID, item.BaseId);
+    AlchemySync::SetEntryBase(item, apObject->baseForm);
     item.Count = aCount;
 
     if (apObject->GetExtraDataList() && !ScopedExtraDataOverride::IsOverriden())

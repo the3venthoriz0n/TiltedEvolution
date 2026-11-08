@@ -1,12 +1,12 @@
 name: Build patched server image
 
 # Builds the server image from this branch and publishes it to GitHub Container Registry
-# (ghcr.io/<owner>/st-reborn-server:patched). amd64 only.
+# (ghcr.io/<owner>/st-reborn-server:potions). amd64 only.
 on:
   workflow_dispatch:
   push:
     branches:
-      - player-inventory-transfers
+      - potion-sync
 
 permissions:
   contents: read
@@ -46,8 +46,8 @@ jobs:
           platforms: linux/amd64
           build-args: |
             GITHUB_ACTIONS=true
-            VERSION_OVERRIDE=v1.8.4
+            VERSION_OVERRIDE=v1.8.4-potions1
           push: true
-          tags: ${{ env.IMAGE }}:patched
+          tags: ${{ env.IMAGE }}:potions
           cache-from: type=gha
           cache-to: type=gha,mode=max

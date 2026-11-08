@@ -26,6 +26,33 @@ struct Inventory
         Vector<EffectItem> Effects{};
     };
 
+    // Describes a potion or poison that was created at runtime (brewed at an alchemy table).
+    // Such an item's form ID is dynamic: it exists only in its owner's save, so another player's game can
+    // neither find nor recreate it from the ID. It is therefore identified and recreated from its effects.
+    struct AlchemyData
+    {
+        enum Type : uint8_t
+        {
+            kNone = 0,
+            kPotion = 1,
+            kPoison = 2
+        };
+
+        // GameId::ModId of Entry::BaseId when an entry carries alchemy data. BaseId is then ComputeKey().
+        static constexpr uint32_t kKeyModId = 0xFFFFFFFE;
+
+        uint8_t Kind{kNone};
+        Vector<EffectItem> Effects{};
+
+        bool IsPresent() const noexcept { return Kind != kNone && !Effects.empty(); }
+
+        // Content hash over the kind and the effects, identical on every client for the same potion.
+        uint32_t ComputeKey() const noexcept;
+
+        void Serialize(TiltedPhoques::Buffer::Writer& aWriter) const noexcept;
+        void Deserialize(TiltedPhoques::Buffer::Reader& aReader) noexcept;
+    };
+
     struct Entry
     {
         GameId BaseId{};
@@ -48,6 +75,9 @@ struct Inventory
         bool ExtraWorn{};
         bool ExtraWornLeft{};
         bool IsQuestItem{};
+
+        // Set for runtime-created potions and poisons, see AlchemyData.
+        AlchemyData AlchemyInfo{};
 
         bool operator==(const Entry& acRhs) const noexcept;
         bool operator!=(const Entry& acRhs) const noexcept;

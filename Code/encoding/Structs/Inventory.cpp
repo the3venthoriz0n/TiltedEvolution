@@ -21,6 +21,62 @@ void Inventory::EffectItem::Deserialize(TiltedPhoques::Buffer::Reader& aReader) 
     EffectId.Deserialize(aReader);
 }
 
+uint32_t Inventory::AlchemyData::ComputeKey() const noexcept
+{
+    // FNV-1a
+    uint32_t hash = 2166136261u;
+    const auto mix = [&hash](const void* apData, size_t aSize) noexcept
+    {
+        const auto* pBytes = static_cast<const uint8_t*>(apData);
+        for (size_t i = 0; i < aSize; i++)
+        {
+            hash ^= pBytes[i];
+            hash *= 16777619u;
+        }
+    };
+
+    mix(&Kind, sizeof(Kind));
+    for (const EffectItem& effect : Effects)
+    {
+        mix(&effect.Magnitude, sizeof(effect.Magnitude));
+        mix(&effect.Area, sizeof(effect.Area));
+        mix(&effect.Duration, sizeof(effect.Duration));
+        mix(&effect.RawCost, sizeof(effect.RawCost));
+        mix(&effect.EffectId.ModId, sizeof(effect.EffectId.ModId));
+        mix(&effect.EffectId.BaseId, sizeof(effect.EffectId.BaseId));
+    }
+    return hash;
+}
+
+void Inventory::AlchemyData::Serialize(TiltedPhoques::Buffer::Writer& aWriter) const noexcept
+{
+    Serialization::WriteVarInt(aWriter, Kind);
+    if (Kind == kNone)
+        return;
+
+    Serialization::WriteVarInt(aWriter, Effects.size());
+    for (const EffectItem& effect : Effects)
+    {
+        effect.Serialize(aWriter);
+    }
+}
+
+void Inventory::AlchemyData::Deserialize(TiltedPhoques::Buffer::Reader& aReader) noexcept
+{
+    Kind = static_cast<uint8_t>(Serialization::ReadVarInt(aReader) & 0xFF);
+    Effects.clear();
+    if (Kind == kNone)
+        return;
+
+    uint64_t effectCount = Serialization::ReadVarInt(aReader);
+    for (uint64_t i = 0; i < effectCount; i++)
+    {
+        EffectItem effect;
+        effect.Deserialize(aReader);
+        Effects.push_back(effect);
+    }
+}
+
 void Inventory::Entry::Serialize(TiltedPhoques::Buffer::Writer& aWriter) const noexcept
 {
     BaseId.Serialize(aWriter);
@@ -48,6 +104,8 @@ void Inventory::Entry::Serialize(TiltedPhoques::Buffer::Writer& aWriter) const n
     Serialization::WriteBool(aWriter, ExtraWorn);
     Serialization::WriteBool(aWriter, ExtraWornLeft);
     Serialization::WriteBool(aWriter, IsQuestItem);
+
+    AlchemyInfo.Serialize(aWriter);
 }
 
 void Inventory::Entry::Deserialize(TiltedPhoques::Buffer::Reader& aReader) noexcept
@@ -79,6 +137,8 @@ void Inventory::Entry::Deserialize(TiltedPhoques::Buffer::Reader& aReader) noexc
     ExtraWorn = Serialization::ReadBool(aReader);
     ExtraWornLeft = Serialization::ReadBool(aReader);
     IsQuestItem = Serialization::ReadBool(aReader);
+
+    AlchemyInfo.Deserialize(aReader);
 }
 
 bool Inventory::operator==(const Inventory& acRhs) const noexcept

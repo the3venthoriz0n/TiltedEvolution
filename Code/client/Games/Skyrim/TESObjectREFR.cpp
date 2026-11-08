@@ -729,7 +729,7 @@ Inventory TESObjectREFR::GetInventory(std::function<bool(TESForm&)> aFilter) con
             continue;
 
         Inventory::Entry entry{};
-        modSystem.GetServerModId(pGameEntry->form->formID, entry.BaseId);
+        AlchemySync::SetEntryBase(entry, pGameEntry->form);
         entry.Count = pGameEntry->count;
 
         for (ExtraDataList* pExtraDataList : *pGameEntry->dataList)
@@ -739,6 +739,7 @@ Inventory TESObjectREFR::GetInventory(std::function<bool(TESForm&)> aFilter) con
 
             Inventory::Entry innerEntry;
             innerEntry.BaseId = entry.BaseId;
+            innerEntry.AlchemyInfo = entry.AlchemyInfo;
             innerEntry.Count = 1;
 
             GetItemFromExtraData(innerEntry, pExtraDataList);
@@ -885,8 +886,22 @@ void TESObjectREFR::AddOrRemoveItem(const Inventory::Entry& arEntry, bool aIsSet
 {
     ModSystem& modSystem = World::Get().GetModSystem();
 
-    uint32_t objectId = modSystem.GetGameId(arEntry.BaseId);
-    TESBoundObject* pObject = Cast<TESBoundObject>(TESForm::GetById(objectId));
+    uint32_t objectId = 0;
+    TESBoundObject* pObject = nullptr;
+    if (arEntry.AlchemyInfo.IsPresent())
+    {
+        // A runtime-created potion or poison: find or create the equivalent local item from its effects.
+        // Only create it when adding; removing something we never had is not worth a new form.
+        pObject = AlchemySync::ResolveItem(arEntry.AlchemyInfo, arEntry.Count > 0);
+        if (pObject)
+            objectId = pObject->formID;
+    }
+    else
+    {
+        objectId = modSystem.GetGameId(arEntry.BaseId);
+        pObject = Cast<TESBoundObject>(TESForm::GetById(objectId));
+    }
+
     if (!pObject)
     {
         spdlog::warn("{}: Object to add not found, {:X}:{:X}.", __FUNCTION__, arEntry.BaseId.ModId, arEntry.BaseId.BaseId);
@@ -1052,10 +1067,8 @@ void TP_MAKE_THISCALL(HookAddInventoryItem, TESObjectREFR, TESBoundObject* apIte
 {
     if (!ScopedInventoryOverride::IsOverriden())
     {
-        auto& modSystem = World::Get().GetModSystem();
-
         Inventory::Entry item{};
-        modSystem.GetServerModId(apItem->formID, item.BaseId);
+        AlchemySync::SetEntryBase(item, apItem);
         item.Count = aCount;
 
         if (apExtraData)
@@ -1074,10 +1087,8 @@ TP_MAKE_THISCALL(HookRemoveInventoryItem, TESObjectREFR, BSPointerHandle<TESObje
 {
     if (!ScopedInventoryOverride::IsOverriden())
     {
-        auto& modSystem = World::Get().GetModSystem();
-
         Inventory::Entry item{};
-        modSystem.GetServerModId(apItem->formID, item.BaseId);
+        AlchemySync::SetEntryBase(item, apItem);
 
         if (apExtraList)
         {

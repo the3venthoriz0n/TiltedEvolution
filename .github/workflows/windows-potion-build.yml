@@ -1,0 +1,19 @@
+name: Potion-sync client build
+
+# Builds the Windows client (and the bundled server) from this branch with the potion-sync changes.
+# Players and the server must all run builds from this branch: they share one version string, so an
+# unmodified client is refused instead of silently desyncing.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - potion-sync
+
+jobs:
+  build-windows:
+    uses: ./.github/workflows/windows.yml
+    with:
+      build-mode: release
+      skyrim-version: latest
+      upload-build-for-next-job: true
+      version-override: v1.8.4-potions1

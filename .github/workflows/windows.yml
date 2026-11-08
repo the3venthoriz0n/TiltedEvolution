@@ -19,6 +19,13 @@ on:
         required: false
         type: boolean
         default: false
+      version-override:
+        description: >-
+          Tag to create on HEAD before building, so the build reports this exact version string.
+          The server refuses clients whose version string differs.
+        required: false
+        type: string
+        default: ''
 
 env:
   BUILD_MODE: ${{ inputs.build-mode || 'releasedbg' }}
@@ -53,6 +60,10 @@ jobs:
         run: |
           test "$(git rev-parse HEAD)" = "$(git rev-parse origin/master)"
           git checkout -B master HEAD
+
+      - name: Override version tag
+        if: ${{ inputs.version-override != '' }}
+        run: git tag -f "${{ inputs.version-override }}"
 
       - name: Resolve artifact version
         if: ${{ inputs.upload-build-for-next-job }}
