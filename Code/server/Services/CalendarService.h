@@ -35,6 +35,11 @@ public:
     float GetTimeScale() const noexcept { return m_dateTime.m_timeModel.TimeScale; }
     bool SetTimeScale(float aScale) noexcept;
 
+    // advances the clock by aHours game hours, 0 < aHours <= 24
+    bool AdvanceHours(float aHours) noexcept;
+    // game hours until the clock reads aHour:00, -1 if aHour is not 0 to 23
+    float HoursUntil(int aHour) const noexcept;
+
 private:
     void OnUpdate(const UpdateEvent&) noexcept;
     void OnPlayerJoin(const PlayerJoinEvent&) noexcept;
