@@ -16,7 +16,11 @@ uint32_t DateTime::GetNumberOfDaysByMonthIndex(int aIndex)
 void DateTime::Update(uint64_t aDeltaTick)
 {
     m_timeModel.Time += GetDeltaTime(aDeltaTick);
+    Normalize();
+}
 
+void DateTime::Normalize() noexcept
+{
     m_timeModel.Day += static_cast<uint32_t>(m_timeModel.Time / 24.f);
     m_timeModel.Time = std::fmod(m_timeModel.Time, 24.f);
 
@@ -43,4 +47,24 @@ float DateTime::GetTimeInDays() const noexcept
     totalDays += m_timeModel.Day;
     totalDays += (m_timeModel.Time / 24.f);
     return totalDays;
+}
+
+void DateTime::AdvanceHours(float aHours) noexcept
+{
+    if (!std::isfinite(aHours) || aHours <= 0.f)
+        return;
+
+    m_timeModel.Time += aHours;
+    Normalize();
+}
+
+float DateTime::HoursUntil(int aHour) const noexcept
+{
+    if (aHour < 0 || aHour > 23)
+        return -1.f;
+
+    float hours = static_cast<float>(aHour) - m_timeModel.Time;
+    if (hours <= 0.f)
+        hours += 24.f;
+    return hours;
 }
