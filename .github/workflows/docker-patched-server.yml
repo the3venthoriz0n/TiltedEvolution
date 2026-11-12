@@ -1,12 +1,14 @@
 name: Build patched server image
 
-# Builds branch sleep-time-advance and publishes it to GitHub Container Registry
-# (ghcr.io/<owner>/st-reborn-server:sleep). amd64 only. Never writes the :patched tag.
+# EXPERIMENT: faster builds. Builds branch sleep-time-advance-fastbuild (same code as sleep-time-advance
+# plus a Dockerfile that caches the xmake packages in their own layer) and publishes it to GitHub Container Registry
+# (ghcr.io/<owner>/st-reborn-server:sleep-fast). amd64 only. Never writes the :patched or :sleep tags.
+# Layer cache: GitHub cache plus a registry cache image (:buildcache-sleep-fast).
 on:
   workflow_dispatch:
   push:
     branches:
-      - sleep-time-advance
+      - sleep-time-advance-fastbuild
 
 permissions:
   contents: read
@@ -48,6 +50,10 @@ jobs:
             GITHUB_ACTIONS=true
             VERSION_OVERRIDE=v1.8.4
           push: true
-          tags: ${{ env.IMAGE }}:sleep
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          tags: ${{ env.IMAGE }}:sleep-fast
+          cache-from: |
+            type=registry,ref=${{ env.IMAGE }}:buildcache-sleep-fast
+            type=gha
+          cache-to: |
+            type=registry,ref=${{ env.IMAGE }}:buildcache-sleep-fast,mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true
+            type=gha,mode=max,ignore-error=true
