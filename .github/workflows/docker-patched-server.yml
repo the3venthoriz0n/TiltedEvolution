@@ -3,7 +3,9 @@ name: Build patched server image
 # Builds branch sleep-on-potions (potion-sync plus the Sleep Together server patch) and publishes it to
 # GitHub Container Registry
 # (ghcr.io/<owner>/st-reborn-server:sleep-potions). amd64 only. Never writes the :potions, :patched or
-# :sleep tags. VERSION_OVERRIDE stays v1.8.4-potions1: the potion client reports that exact version and
+# :sleep tags. Layer cache: the Dockerfile installs the xmake packages in their own layer; it is cached in
+# the GitHub cache and in a registry cache image (:buildcache-sleep-potions), so later builds skip it.
+# VERSION_OVERRIDE stays v1.8.4-potions1: the potion client reports that exact version and
 # the server refuses clients whose version string differs.
 on:
   workflow_dispatch:
@@ -52,5 +54,9 @@ jobs:
             VERSION_OVERRIDE=v1.8.4-potions1
           push: true
           tags: ${{ env.IMAGE }}:sleep-potions
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: |
+            type=registry,ref=${{ env.IMAGE }}:buildcache-sleep-potions
+            type=gha
+          cache-to: |
+            type=registry,ref=${{ env.IMAGE }}:buildcache-sleep-potions,mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true
+            type=gha,mode=max,ignore-error=true
