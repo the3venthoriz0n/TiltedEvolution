@@ -31,9 +31,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends build-essential
 
 FROM debian:12-slim AS manifest
 
-WORKDIR /ctx
-COPY . /ctx
-RUN mkdir /manifest && \
+# The build context is mounted read-only instead of copied, so its (large) contents, including the
+# full git history, do not become a layer that would be exported to the layer cache on every push.
+RUN --mount=type=bind,target=/ctx \
+    mkdir /manifest && cd /ctx && \
     find . -path ./.git -prune -o -type f \( -name '*.lua' -o -name '*.in' \) -exec cp --parents {} /manifest \;
 
 # Install every xmake package once. The project root here is a throwaway directory, so nothing
