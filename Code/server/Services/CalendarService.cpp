@@ -1,5 +1,7 @@
 #include <Services/CalendarService.h>
 
+#include <cmath>
+
 #include <GameServer.h>
 #include <World.h>
 
@@ -149,4 +151,21 @@ bool CalendarService::SetTimeScale(float aScale) noexcept
     }
 
     return false;
+}
+
+bool CalendarService::AdvanceHours(float aHours) noexcept
+{
+    if (std::isfinite(aHours) && aHours > 0.f && aHours <= 24.f)
+    {
+        m_dateTime.AdvanceHours(aHours);
+        SendTimeResync();
+        return true;
+    }
+
+    return false;
+}
+
+float CalendarService::HoursUntil(int aHour) const noexcept
+{
+    return m_dateTime.HoursUntil(aHour);
 }
