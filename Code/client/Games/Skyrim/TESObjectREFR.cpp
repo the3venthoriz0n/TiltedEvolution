@@ -890,9 +890,9 @@ void TESObjectREFR::AddOrRemoveItem(const Inventory::Entry& arEntry, bool aIsSet
     TESBoundObject* pObject = nullptr;
     if (arEntry.AlchemyInfo.IsPresent())
     {
-        // A runtime-created potion or poison: find or create the equivalent local item from its effects.
-        // Only create it when adding; removing something we never had is not worth a new form.
-        pObject = AlchemySync::ResolveItem(arEntry.AlchemyInfo, arEntry.Count > 0);
+        // A runtime-created potion or poison. When adding, find or create an equivalent local item that the game
+        // keeps alive; when removing, take the matching item this reference actually holds.
+        pObject = arEntry.Count > 0 ? AlchemySync::ResolveItem(arEntry.AlchemyInfo) : AlchemySync::FindInContainer(this, arEntry.AlchemyInfo);
         if (pObject)
             objectId = pObject->formID;
     }

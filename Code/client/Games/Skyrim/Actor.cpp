@@ -1128,7 +1128,7 @@ void Actor::DropOrPickUpObject(const Inventory::Entry& arEntry, NiPoint3* apLoca
     TESBoundObject* pObject = nullptr;
     if (arEntry.AlchemyInfo.IsPresent())
     {
-        pObject = AlchemySync::ResolveItem(arEntry.AlchemyInfo, false);
+        pObject = AlchemySync::FindInContainer(this, arEntry.AlchemyInfo);
     }
     else
     {

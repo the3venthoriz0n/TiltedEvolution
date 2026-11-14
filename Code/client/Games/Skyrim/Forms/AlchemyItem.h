@@ -4,6 +4,8 @@
 
 #include <Structs/Inventory.h>
 
+struct TESObjectREFR;
+
 struct AlchemyItem : MagicItem
 {
     enum Flags : uint32_t
@@ -38,6 +40,16 @@ namespace AlchemySync
 // AlchemyData, and BaseId becomes a hash of that data. Any other form is handled as before.
 void SetEntryBase(Inventory::Entry& arEntry, TESForm* apForm) noexcept;
 
-// Returns the local item that matches the data, creating it if aCreate is set and none exists yet.
-AlchemyItem* ResolveItem(const Inventory::AlchemyData& acData, bool aCreate) noexcept;
+// Returns a local item that matches the data, for adding it to an inventory. The item is always one the
+// created-object manager keeps alive for the session: a cached Create() result that is still registered, or a
+// new Create() result (which reuses a live identical item if the game has one).
+AlchemyItem* ResolveItem(const Inventory::AlchemyData& acData) noexcept;
+
+// Returns the item in this reference's inventory that matches the data, for removing or dropping it.
+AlchemyItem* FindInContainer(TESObjectREFR* apRef, const Inventory::AlchemyData& acData) noexcept;
+
+// Takes a created-object reference on every runtime-created potion or poison in the reference's inventory, so
+// none of them can be destroyed while the inventory is rebuilt. Release with UnpinItems.
+Vector<AlchemyItem*> PinDynamicItems(TESObjectREFR* apRef) noexcept;
+void UnpinItems(const Vector<AlchemyItem*>& acPinned) noexcept;
 } // namespace AlchemySync
