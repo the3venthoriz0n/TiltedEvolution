@@ -133,7 +133,8 @@ AlchemyItem* AlchemySync::ResolveItem(const Inventory::AlchemyData& acData) noex
         // Only trust the cached form if it is still registered with the created-object manager (so it is not
         // destroyed or about to be) and still describes the same potion.
         AlchemyItem* pCached = Cast<AlchemyItem>(TESForm::GetById(it->second));
-        if (pCached && BGSCreatedObjectManager::Get()->GetRefCount(pCached) < 0)
+        BGSCreatedObjectManager* pManager = BGSCreatedObjectManager::Get();
+        if (pCached && pManager && pManager->GetRefCount(pCached) < 0)
         {
             spdlog::warn("AlchemySync: cached potion {:X} (key {:X}) is no longer registered with the created-object manager, not reusing it",
                          it->second, key);

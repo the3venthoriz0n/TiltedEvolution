@@ -823,6 +823,11 @@ void TESObjectREFR::SetInventory(const Inventory& aInventory) noexcept
 
     ScopedInventoryOverride _;
 
+    // Runtime-created potions are reference counted by the game, which destroys one when its count reaches 0.
+    // Keep a reference on those we hold while the inventory is rebuilt, so RemoveAllItems cannot destroy a potion
+    // that is about to be added back (or that this actor's combat inventory still points at).
+    const Vector<AlchemyItem*> pinned = AlchemySync::PinDynamicItems(this);
+
     RemoveAllItems();
 
     for (const Inventory::Entry& entry : aInventory.Entries)
@@ -830,6 +835,8 @@ void TESObjectREFR::SetInventory(const Inventory& aInventory) noexcept
         if (entry.Count != 0)
             AddOrRemoveItem(entry, true);
     }
+
+    AlchemySync::UnpinItems(pinned);
 }
 
 Vector<uint32_t> TESObjectREFR::RemoveNonQuestItems(Inventory& aCurrentInventory) noexcept
@@ -865,6 +872,9 @@ void TESObjectREFR::SetInventoryRetainingQuestItems(Inventory& aCurrentInventory
 
     ScopedInventoryOverride _;
 
+    // Same as SetInventory: keep runtime-created potions alive while the inventory is rebuilt.
+    const Vector<AlchemyItem*> pinned = AlchemySync::PinDynamicItems(this);
+
     // Remove all non-quest items first
     Vector<uint32_t> questItemIds = RemoveNonQuestItems(aCurrentInventory);
     auto& modSystem = World::Get().GetModSystem();
@@ -880,6 +890,8 @@ void TESObjectREFR::SetInventoryRetainingQuestItems(Inventory& aCurrentInventory
                 AddOrRemoveItem(entry, true);
         }
     }
+
+    AlchemySync::UnpinItems(pinned);
 }
 
 void TESObjectREFR::AddOrRemoveItem(const Inventory::Entry& arEntry, bool aIsSettingInventory) noexcept
