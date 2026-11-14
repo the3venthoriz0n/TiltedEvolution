@@ -51,5 +51,5 @@ AlchemyItem* FindInContainer(TESObjectREFR* apRef, const Inventory::AlchemyData&
 // Takes a created-object reference on every runtime-created potion or poison in the reference's inventory, so
 // none of them can be destroyed while the inventory is rebuilt. Release with UnpinItems.
 Vector<AlchemyItem*> PinDynamicItems(TESObjectREFR* apRef) noexcept;
-void UnpinItems(const Vector<AlchemyItem*>& acPinned) noexcept;
+void UnpinItems(TESObjectREFR* apRef, const Vector<AlchemyItem*>& acPinned) noexcept;
 } // namespace AlchemySync

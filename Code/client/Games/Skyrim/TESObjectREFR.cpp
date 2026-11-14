@@ -836,7 +836,7 @@ void TESObjectREFR::SetInventory(const Inventory& aInventory) noexcept
             AddOrRemoveItem(entry, true);
     }
 
-    AlchemySync::UnpinItems(pinned);
+    AlchemySync::UnpinItems(this, pinned);
 }
 
 Vector<uint32_t> TESObjectREFR::RemoveNonQuestItems(Inventory& aCurrentInventory) noexcept
@@ -891,7 +891,7 @@ void TESObjectREFR::SetInventoryRetainingQuestItems(Inventory& aCurrentInventory
         }
     }
 
-    AlchemySync::UnpinItems(pinned);
+    AlchemySync::UnpinItems(this, pinned);
 }
 
 void TESObjectREFR::AddOrRemoveItem(const Inventory::Entry& arEntry, bool aIsSettingInventory) noexcept

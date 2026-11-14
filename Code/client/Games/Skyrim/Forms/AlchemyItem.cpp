@@ -228,12 +228,20 @@ Vector<AlchemyItem*> AlchemySync::PinDynamicItems(TESObjectREFR* apRef) noexcept
     return pinned;
 }
 
-void AlchemySync::UnpinItems(const Vector<AlchemyItem*>& acPinned) noexcept
+void AlchemySync::UnpinItems(TESObjectREFR* apRef, const Vector<AlchemyItem*>& acPinned) noexcept
 {
     BGSCreatedObjectManager* pManager = BGSCreatedObjectManager::Get();
     if (!pManager)
         return;
 
     for (AlchemyItem* pItem : acPinned)
+    {
+        // Our pin is the last reference: nothing holds the potion any more and the game destroys it now. Logged so
+        // a later crash on a stale pointer to it can be matched to the item.
+        if (pManager->GetRefCount(pItem) == 1)
+            spdlog::warn("AlchemySync: potion {:X} is no longer held after setting the inventory of {:X}; the game destroys it now",
+                         pItem->formID, apRef ? apRef->formID : 0);
+
         pManager->DecrementRef(pItem);
+    }
 }
