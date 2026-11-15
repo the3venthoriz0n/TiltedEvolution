@@ -1,0 +1,209 @@
+name: Release potion-sync client
+
+# Pushing a tag like potions-v1.8.4-1 builds the Windows client of the potion-sync line and publishes it as a GitHub release
+# with the client zip and the debug-symbols zip. A tag with one more suffix, such as potions-v1.8.4-1-test1, makes a
+# PRE-RELEASE instead, so every change can get a kept build without publishing it.
+#
+# Tag format:  potions-v<STR version>-<potion build number>[-<test suffix>]
+# The tagged commit must be on potion-sync or potion-sync-crashfix, or the run stops before anything is built.
+#
+# The build is the same as windows-potion-build.yml (release mode, latest Skyrim, upload for the next job), and the client
+# reports the same version string v1.8.4-potions1 (BUILD_VERSION below): the server refuses clients whose version string
+# differs, so the string does NOT change with the release tag. Change it only together with the server and every player.
+#
+# This does not call windows.yml as a reusable workflow, because from a tag trigger that file would
+#   1. stop at "Checkout master on tag push" (this fork has no master branch), and
+#   2. let `git describe` see the release tag next to the override tag at HEAD, and the release tag sorts first, which would
+#      change the client's version string and the zip names.
+# So the build steps below are a copy of windows.yml's, with the triggering tag removed before the override tag is made.
+# Keep them in step with windows.yml when it changes.
+#
+# This workflow does not clash with release.yml or docker-server-image.yml: their tag filter is 'v[0-9]+.[0-9]+.[0-9]+', which
+# never matches a tag starting with "potions-".
+#
+# Run manually from the Actions tab to build without releasing.
+on:
+  push:
+    tags:
+      - 'potions-v*'
+  workflow_dispatch:
+
+env:
+  BUILD_VERSION: v1.8.4-potions1
+  BUILD_MODE: release
+  SKYRIM_VERSION: latest
+
+jobs:
+  build-windows:
+    runs-on: windows-2022
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # We need full history in order to create a version string (BuildInfo.h)
+          fetch-depth: 0
+
+      - name: Checkout submodules
+        run: |
+          git submodule sync --recursive
+          git submodule update --init --force --recursive --depth=1
+
+      - name: Tag name and branch check
+        if: github.ref_type == 'tag'
+        run: |
+          if ! [[ "$GITHUB_REF_NAME" =~ ^potions-v[0-9]+\.[0-9]+\.[0-9]+-[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+            echo "Tag $GITHUB_REF_NAME must look like potions-v1.8.4-1 (release) or potions-v1.8.4-1-test1 (test build)"
+            exit 1
+          fi
+          git fetch origin potion-sync potion-sync-crashfix || true
+          ok=0
+          for b in potion-sync potion-sync-crashfix; do
+            if git rev-parse --verify -q "origin/$b" >/dev/null && git merge-base --is-ancestor "$GITHUB_SHA" "origin/$b"; then ok=1; fi
+          done
+          if [ "$ok" != 1 ]; then
+            echo "Tag $GITHUB_REF_NAME is not on potion-sync or potion-sync-crashfix; nothing was published."
+            exit 1
+          fi
+
+      # The client version string comes from `git describe --tags`: leave exactly one tag at HEAD, the override tag.
+      - name: Override version tag
+        run: |
+          for t in $(git tag --points-at HEAD); do git tag -d "$t"; done
+          git tag -f "$BUILD_VERSION"
+
+      - name: Resolve artifact version
+        run: |
+          version="$(git describe --tags --always)"
+          echo "describe: $version"
+          if [ "$version" != "$BUILD_VERSION" ]; then
+            echo "Expected the build to report $BUILD_VERSION but git describe says $version"
+            exit 1
+          fi
+          echo "ARTIFACT_VERSION=${version#v}" >> "$GITHUB_ENV"
+
+      - name: Cache xmake dependencies
+        uses: actions/cache@v6
+        with:
+          path: ~/AppData/Local/.xmake/packages
+          key: ${{ runner.os }}-xmake-${{ hashFiles('**/xmake.lua') }}
+
+      - name: Setup xmake
+        uses: xmake-io/github-action-setup-xmake@v1
+        with:
+          xmake-version: 3.1.0
+          actions-cache-folder: '.xmake-cache' # This doesn't cache dependencies, only xmake itself
+          actions-cache-key: windows-2022
+
+      - name: Configure xmake and install dependencies
+        run: xmake config --plat=windows --arch=x64 --mode="$BUILD_MODE" --skyrim_version="$SKYRIM_VERSION" --yes -vD
+
+      - name: Build with xmake
+        run: |
+          xmake -y
+          echo "STR_BUILD_DIR=build/windows/x64/${BUILD_MODE}/" >> "$GITHUB_ENV"
+
+      - name: Output distrib binaries via xmake
+        run: |
+          xmake install -o distrib
+          cp -rf distrib/bin/* "$STR_BUILD_DIR"
+
+      - name: Generate default server config
+        run: |
+          "$STR_BUILD_DIR/SkyrimTogetherServer.exe" --generate-config "$STR_BUILD_DIR/config/STServer.ini"
+          cat "$STR_BUILD_DIR/config/STServer.ini"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: lts/iron
+          cache-dependency-path: Code/skyrim_ui/pnpm-lock.yaml
+          cache: pnpm
+
+      - name: Build the UI
+        run: |
+          pnpm --prefix Code/skyrim_ui/ install
+          pnpm --prefix Code/skyrim_ui/ deploy:production
+          cp -r Code/skyrim_ui/dist/UI "$STR_BUILD_DIR"
+
+      - name: Package build and organize directories
+        run: |
+          mkdir -p str-build/SkyrimTogetherReborn str-pdb
+          mv "$STR_BUILD_DIR"/* str-build/SkyrimTogetherReborn/
+          cp -r GameFiles/Skyrim/* str-build/
+
+      - name: Remove unnecessary build files, keep .pdb
+        run: |
+          mv str-build/SkyrimTogetherReborn/SkyrimTogether.pdb str-pdb/
+          mv str-build/SkyrimTogetherReborn/SkyrimTogetherServer.pdb str-pdb/
+          rm -f str-build/SkyrimTogetherReborn/*.pdb str-build/SkyrimTogetherReborn/*.lib str-build/SkyrimTogetherReborn/*.exp
+          rm -f str-build/SkyrimTogetherReborn/*Tests.exe
+
+      - name: Create Windows release zips
+        run: |
+          mkdir -p release-assets
+          (cd str-build && 7z a -tzip "../release-assets/SkyrimTogether-${ARTIFACT_VERSION}-windows-x64.zip" .)
+          (cd str-pdb && 7z a -tzip "../release-assets/SkyrimTogether-${ARTIFACT_VERSION}-windows-x64-debug-symbols.zip" .)
+
+      - name: Upload playable build
+        uses: actions/upload-artifact@v7
+        with:
+          name: SkyrimTogether-${{ env.ARTIFACT_VERSION }}-windows-x64
+          archive: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
+          retention-days: 7
+          if-no-files-found: error
+          path: release-assets/SkyrimTogether-${{ env.ARTIFACT_VERSION }}-windows-x64.zip
+
+      - name: Upload debug symbols
+        uses: actions/upload-artifact@v7
+        with:
+          name: SkyrimTogether-${{ env.ARTIFACT_VERSION }}-windows-x64-debug-symbols
+          archive: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
+          retention-days: 7
+          if-no-files-found: error
+          path: release-assets/SkyrimTogether-${{ env.ARTIFACT_VERSION }}-windows-x64-debug-symbols.zip
+
+  publish:
+    needs: build-windows
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download release assets
+        uses: actions/download-artifact@v8
+        with:
+          path: release-files
+          pattern: 'SkyrimTogether-*'
+          merge-multiple: true
+
+      - name: Verify release assets
+        run: |
+          ls -l release-files
+          version="${BUILD_VERSION#v}"
+          for asset in "SkyrimTogether-${version}-windows-x64.zip" "SkyrimTogether-${version}-windows-x64-debug-symbols.zip"; do
+            test -f "release-files/$asset"
+          done
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          version="${BUILD_VERSION#v}"
+          extra=()
+          # potions-v1.8.4-1 is a release; potions-v1.8.4-1-test1 (anything after the build number) is a pre-release
+          if [[ "$GITHUB_REF_NAME" =~ ^potions-v[0-9]+\.[0-9]+\.[0-9]+-[0-9]+-.+$ ]]; then extra+=(--prerelease); fi
+          gh release create "$GITHUB_REF_NAME" \
+            "release-files/SkyrimTogether-${version}-windows-x64.zip" \
+            "release-files/SkyrimTogether-${version}-windows-x64-debug-symbols.zip" \
+            --verify-tag \
+            --generate-notes \
+            --title "Skyrim Together potions ${GITHUB_REF_NAME#potions-v}" \
+            "${extra[@]}"

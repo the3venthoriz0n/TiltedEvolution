@@ -41,6 +41,15 @@ Have some experience in C++, and want to help advance the project faster? Contri
 * [**Libraries/**](./Libraries): Networking, hooking, reverse-engineering and UI libraries (git submodules).
 * [**Tools/**](./Tools): Reverse-engineering and address scripts.
 
+## Releasing the potion-sync client
+
+Push a tag `potions-v<STR version>-<build number>` on a commit that is on `potion-sync` or `potion-sync-crashfix` to build the Windows client and publish it. The tag only chooses the release; the client still reports the version string `v1.8.4-potions1`, because the server refuses clients with a different string.
+
+        git tag potions-v1.8.4-1
+        git push origin potions-v1.8.4-1
+
+A tag with a further suffix, for example `potions-v1.8.4-1-test1`, makes a GitHub *pre-release*. The release has `SkyrimTogether-1.8.4-potions1-windows-x64.zip` and `SkyrimTogether-1.8.4-potions1-windows-x64-debug-symbols.zip`. The workflow is `.github/workflows/release-potion-client.yml`; it is separate from the upstream `release.yml` (tags `vX.Y.Z`), which it never triggers. Run it from the Actions tab (without a tag) to build only.
+
 ## License
 [![GNU GPLv3 Image](https://www.gnu.org/graphics/gplv3-127x51.png)](http://www.gnu.org/licenses/gpl-3.0.en.html)
 
