@@ -119,6 +119,22 @@ bool ProbeMagicItem(const void* apItem, uintptr_t& aVtable, uint8_t& aFormType, 
     }
 }
 
+// A form whose destructor already ran keeps a base-class vtable (the last destructor in the chain,
+// ~BaseFormComponent, leaves BaseFormComponent's 4-slot vtable), which is inside the game image and so passes the
+// range check. The game's own RTTI cast tells such an object apart: it no longer derives from MagicItem.
+// Kept free of C++ objects for __try; a garbage vtable makes the cast fault or throw, both caught here.
+bool IsMagicItemByRtti(const MagicItem* apItem) noexcept
+{
+    __try
+    {
+        return Cast<MagicItem>(reinterpret_cast<TESForm*>(const_cast<MagicItem*>(apItem))) != nullptr;
+    }
+    __except (EXCEPTION_EXECUTE_HANDLER)
+    {
+        return false;
+    }
+}
+
 bool IsLiveMagicItem(const MagicItem* apItem, uint32_t& aFormId) noexcept
 {
     uintptr_t vtable = 0;
@@ -139,9 +155,11 @@ bool IsLiveMagicItem(const MagicItem* apItem, uint32_t& aFormId) noexcept
     case kSpell:
     case kScroll:
     case kIngredient:
-    case kAlchemy: return true;
+    case kAlchemy: break;
     default: return false;
     }
+
+    return IsMagicItemByRtti(apItem);
 }
 
 uint32_t GetAttackerFormId(const CombatController* apController) noexcept
