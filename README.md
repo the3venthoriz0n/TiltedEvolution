@@ -60,7 +60,7 @@ the Free Software Foundation, either version 3 of the License, or
 
 ## Modified version, source and credits
 
-**This is a modified version of Skyrim Together Reborn.** It is not the official release and is not made or endorsed by the Tilted Online / Skyrim Together Reborn team. Do not ask them for support for this build. What changed is listed in [MODIFICATIONS.md](./MODIFICATIONS.md), where the source for a build is found is in [SOURCE.txt](./SOURCE.txt), and the licence is in [LICENSE](./LICENSE) (GPL-3.0-or-later; see also its note on the LGPLv2 launcher component). Upstream: https://github.com/tiltedphoques/TiltedEvolution.
+**This is a modified version of Skyrim Together Reborn.** It is not the official release and is not made or endorsed by the Tilted Online / Skyrim Together Reborn team. Do not ask them for support for this build. The source is this repository (https://github.com/the3venthoriz0n/TiltedEvolution), a fork of the upstream project, and the licence is in [LICENSE](./LICENSE) (GPL-3.0-or-later; see also its note on the LGPLv2 launcher component). Upstream: https://github.com/tiltedphoques/TiltedEvolution.
 
 ### Credits
 
