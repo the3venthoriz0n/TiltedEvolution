@@ -1,5 +1,6 @@
 #include <BranchInfo.h>
 #include "CrashHandler.h"
+#include "FlightRecorder.h"
 #include <DbgHelp.h>
 #include <Windows.h>
 #include <chrono>
@@ -35,6 +36,9 @@ LONG WINAPI VectoredExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo)
         alreadyCrashed++ == 0)
     {
         spdlog::critical (__FUNCTION__ ": crash occurred!"); 
+
+        // Recent actor/inventory/potion events, written before the coredump (best effort, never throws).
+        FlightRecorder::Dump("crash");
         
         spdlog::error(__FUNCTION__ ": exception code is {:x}, at address {}, flags {:x} ",
                       pExceptionInfo->ExceptionRecord->ExceptionCode,

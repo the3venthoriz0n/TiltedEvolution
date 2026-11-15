@@ -6,6 +6,7 @@
 #include <Games/BGSCreatedObjectManager.h>
 #include <TESObjectREFR.h>
 #include <ExtraData/ExtraContainerChanges.h>
+#include <FlightRecorder.h>
 
 #include <mutex>
 
@@ -138,12 +139,16 @@ AlchemyItem* AlchemySync::ResolveItem(const Inventory::AlchemyData& acData) noex
         {
             spdlog::warn("AlchemySync: cached potion {:X} (key {:X}) is no longer registered with the created-object manager, not reusing it",
                          it->second, key);
+            FlightRecorder::Record(FlightRecorder::Event::PotionCacheStale, 0, it->second, static_cast<int32_t>(key));
             pCached = nullptr;
         }
 
         Inventory::AlchemyData current;
         if (pCached && ReadData(pCached, current) && current.ComputeKey() == key)
+        {
+            FlightRecorder::Record(FlightRecorder::Event::PotionCacheHit, 0, pCached->formID, static_cast<int32_t>(key));
             return pCached;
+        }
 
         s_formByKey.erase(it);
     }
@@ -156,6 +161,8 @@ AlchemyItem* AlchemySync::ResolveItem(const Inventory::AlchemyData& acData) noex
     }
 
     s_formByKey[key] = pItem->formID;
+    FlightRecorder::Record(FlightRecorder::Event::PotionCreated, 0, pItem->formID, static_cast<int32_t>(acData.Effects.size()),
+                           static_cast<int32_t>(key));
     spdlog::info("Created {:X} for a {} with {} effect(s)", pItem->formID, acData.Kind == Inventory::AlchemyData::kPoison ? "poison" : "potion", acData.Effects.size());
     return pItem;
 }
@@ -214,12 +221,16 @@ Vector<AlchemyItem*> AlchemySync::PinDynamicItems(TESObjectREFR* apRef) noexcept
         {
             spdlog::warn("AlchemySync: {:X} holds potion {:X} (count {}) that is not registered with the created-object manager",
                          apRef->formID, apItem->formID, aCount);
+            FlightRecorder::Record(FlightRecorder::Event::PotionUnregisteredHeld, apRef->formID, apItem->formID, aCount);
             return;
         }
 
         if (refCount == 1)
+        {
             spdlog::warn("AlchemySync: setting the inventory of {:X} would have destroyed potion {:X} (count {}, refcount 1); keeping it alive",
                          apRef->formID, apItem->formID, aCount);
+            FlightRecorder::Record(FlightRecorder::Event::PotionRefCountOne, apRef->formID, apItem->formID, aCount);
+        }
 
         pManager->IncrementRef(apItem);
         pinned.push_back(apItem);
@@ -239,8 +250,11 @@ void AlchemySync::UnpinItems(TESObjectREFR* apRef, const Vector<AlchemyItem*>& a
         // Our pin is the last reference: nothing holds the potion any more and the game destroys it now. Logged so
         // a later crash on a stale pointer to it can be matched to the item.
         if (pManager->GetRefCount(pItem) == 1)
+        {
             spdlog::warn("AlchemySync: potion {:X} is no longer held after setting the inventory of {:X}; the game destroys it now",
                          pItem->formID, apRef ? apRef->formID : 0);
+            FlightRecorder::Record(FlightRecorder::Event::PotionLastRefReleased, apRef ? apRef->formID : 0, pItem->formID);
+        }
 
         pManager->DecrementRef(pItem);
     }

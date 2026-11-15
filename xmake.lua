@@ -82,10 +82,12 @@ before_build(function (target)
     #define IS_MASTER %d
     #define IS_BRANCH_BETA %d
     #define IS_BRANCH_PREREL %d
-    ]], 
-    bool_to_number[branch == "master"], 
-    bool_to_number[branch == "bluedove"], 
-    bool_to_number[branch == "prerel"])
+    #define BUILD_COMMIT_HASH "%s"
+    ]],
+    bool_to_number[branch == "master"],
+    bool_to_number[branch == "bluedove"],
+    bool_to_number[branch == "prerel"],
+    commitHash)
 
     -- fix always-compiles problem by updating the file only if content has changed.
     local filepath = "build/BranchInfo.h"

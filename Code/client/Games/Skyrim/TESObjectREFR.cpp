@@ -22,6 +22,8 @@
 #include <ExtraData/ExtraWornLeft.h>
 #include <Forms/EnchantmentItem.h>
 #include <Forms/AlchemyItem.h>
+#include <FlightRecorder.h>
+#include <Games/ActorExtension.h>
 #include <EquipManager.h>
 #include <DefaultObjectManager.h>
 #include <BSAnimationGraphManager.h>
@@ -817,6 +819,16 @@ bool TESObjectREFR::IsItemInInventory(uint32_t aFormID) const noexcept
     return !inventory.Entries.empty();
 }
 
+namespace
+{
+bool IsRemotelyManaged(TESObjectREFR* apRef) noexcept
+{
+    Actor* pActor = Cast<Actor>(static_cast<TESForm*>(apRef));
+    const ActorExtension* pExtension = pActor ? pActor->GetExtension() : nullptr;
+    return pExtension && pExtension->IsRemote();
+}
+} // namespace
+
 void TESObjectREFR::SetInventory(const Inventory& aInventory) noexcept
 {
     spdlog::debug("Setting inventory for {:X}", formID);
@@ -827,6 +839,9 @@ void TESObjectREFR::SetInventory(const Inventory& aInventory) noexcept
     // Keep a reference on those we hold while the inventory is rebuilt, so RemoveAllItems cannot destroy a potion
     // that is about to be added back (or that this actor's combat inventory still points at).
     const Vector<AlchemyItem*> pinned = AlchemySync::PinDynamicItems(this);
+    const bool remote = IsRemotelyManaged(this);
+    FlightRecorder::Record(FlightRecorder::Event::SetInventoryBegin, formID, 0, static_cast<int32_t>(aInventory.Entries.size()),
+                           static_cast<int32_t>(pinned.size()), remote);
 
     RemoveAllItems();
 
@@ -837,6 +852,7 @@ void TESObjectREFR::SetInventory(const Inventory& aInventory) noexcept
     }
 
     AlchemySync::UnpinItems(this, pinned);
+    FlightRecorder::Record(FlightRecorder::Event::SetInventoryEnd, formID, 0, 0, static_cast<int32_t>(pinned.size()), remote);
 }
 
 Vector<uint32_t> TESObjectREFR::RemoveNonQuestItems(Inventory& aCurrentInventory) noexcept
@@ -874,6 +890,9 @@ void TESObjectREFR::SetInventoryRetainingQuestItems(Inventory& aCurrentInventory
 
     // Same as SetInventory: keep runtime-created potions alive while the inventory is rebuilt.
     const Vector<AlchemyItem*> pinned = AlchemySync::PinDynamicItems(this);
+    const bool remote = IsRemotelyManaged(this);
+    FlightRecorder::Record(FlightRecorder::Event::SetInventoryBegin, formID, 0, static_cast<int32_t>(acSourceInventory.Entries.size()),
+                           static_cast<int32_t>(pinned.size()), remote);
 
     // Remove all non-quest items first
     Vector<uint32_t> questItemIds = RemoveNonQuestItems(aCurrentInventory);
@@ -892,6 +911,7 @@ void TESObjectREFR::SetInventoryRetainingQuestItems(Inventory& aCurrentInventory
     }
 
     AlchemySync::UnpinItems(this, pinned);
+    FlightRecorder::Record(FlightRecorder::Event::SetInventoryEnd, formID, 0, 0, static_cast<int32_t>(pinned.size()), remote);
 }
 
 void TESObjectREFR::AddOrRemoveItem(const Inventory::Entry& arEntry, bool aIsSettingInventory) noexcept

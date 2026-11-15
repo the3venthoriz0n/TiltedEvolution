@@ -55,6 +55,7 @@
 #include <Messages/NotifyMount.h>
 #include <Messages/NewPackageRequest.h>
 #include <Messages/NotifyNewPackage.h>
+#include <FlightRecorder.h>
 #include <Messages/RequestRespawn.h>
 #include <Messages/NotifyRespawn.h>
 #include <Messages/SyncExperienceRequest.h>
@@ -222,6 +223,7 @@ void CharacterService::DeleteTempActor(const uint32_t aFormId) noexcept
     Actor* pActor = Cast<Actor>(TESForm::GetById(aFormId));
     if (pActor && ((pActor->formID & 0xFF000000) == 0xFF000000))
     {
+        FlightRecorder::Record(FlightRecorder::Event::ActorDeleted, aFormId, pActor->baseForm ? pActor->baseForm->formID : 0);
         pActor->Delete();
         spdlog::info("\tDeleted actor {:X}", aFormId);
     }
@@ -293,6 +295,7 @@ void CharacterService::OnActorRemoved(const ActorRemovedEvent& acEvent) noexcept
         m_world.destroy(cId);
 
     spdlog::info("Actor removed, form id: {:X}", acEvent.FormId);
+    FlightRecorder::Record(FlightRecorder::Event::ActorRemoved, acEvent.FormId);
 }
 
 void CharacterService::OnUpdate(const UpdateEvent& acUpdateEvent) noexcept
@@ -465,6 +468,7 @@ void CharacterService::OnAssignCharacter(const AssignCharacterResponse& acMessag
         localComponent.IsDead = acMessage.IsDead;
         localComponent.IsWeaponDrawn = acMessage.IsWeaponDrawn;
         pActor->GetExtension()->SetRemote(false);
+        FlightRecorder::Record(FlightRecorder::Event::LocalActorReceived, pActor->formID, pActor->baseForm ? pActor->baseForm->formID : 0);
     }
     else
     {
@@ -473,6 +477,7 @@ void CharacterService::OnAssignCharacter(const AssignCharacterResponse& acMessag
         m_world.emplace_or_replace<RemoteComponent>(cEntity, acMessage.ServerId, formIdComponent->Id, acMessage.OwnershipEpoch);
 
         pActor->GetExtension()->SetRemote(true);
+        FlightRecorder::Record(FlightRecorder::Event::RemoteActorReceived, pActor->formID, pActor->baseForm ? pActor->baseForm->formID : 0, 0, 0, true);
 
         m_world.remove<EarlyAnimationBufferComponent>(cEntity);
         InterpolationSystem::Setup(m_world, cEntity);
@@ -1327,7 +1332,11 @@ void CharacterService::ProcessNewEntity(entt::entity aEntity) const noexcept
             RequestOwnership(pActor->formID, pRemoteComponent->Id, aEntity);
         }
         else
+        {
             spdlog::info("New entity remotely managed, form id: {:X}, server id: {:X}", pActor->formID, pRemoteComponent->Id);
+            FlightRecorder::Record(FlightRecorder::Event::RemoteActorReceived, pActor->formID, pActor->baseForm ? pActor->baseForm->formID : 0,
+                                   static_cast<int32_t>(pRemoteComponent->Id), 0, true);
+        }
 
         return;
     }
@@ -1564,6 +1573,7 @@ void CharacterService::CancelServerAssignment(const entt::entity aEntity, const 
             "({}, {}, {})",
             request.ServerId, request.OwnershipEpoch, request.WorldSpaceId.BaseId, request.CellId.BaseId, request.Position.x, request.Position.y, request.Position.z);
 
+        FlightRecorder::Record(FlightRecorder::Event::OwnershipTransferred, aFormId, 0, static_cast<int32_t>(request.ServerId));
         m_transport.Send(request);
 
         m_world.remove<LocalAnimationComponent, LocalComponent>(aEntity);

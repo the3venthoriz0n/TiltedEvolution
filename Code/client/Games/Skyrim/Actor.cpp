@@ -27,6 +27,7 @@
 
 #include <Forms/ActorValueInfo.h>
 #include <Forms/TESRace.h>
+#include <FlightRecorder.h>
 
 #include <Effects/ValueModifierEffect.h>
 
@@ -952,6 +953,9 @@ bool TP_MAKE_THISCALL(HookSpawnActorInWorld, Actor)
     if (pNpc)
     {
         spdlog::info("Spawn Actor: {:X}, and NPC {}", apThis->formID, pNpc->fullName.value);
+
+        const ActorExtension* pExtension = apThis->GetExtension();
+        FlightRecorder::Record(FlightRecorder::Event::ActorSpawned, apThis->formID, pNpc->formID, 1, 0, pExtension && pExtension->IsRemote());
     }
 
     return TiltedPhoques::ThisCall(RealSpawnActorInWorld, apThis);

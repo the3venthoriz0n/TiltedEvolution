@@ -25,6 +25,7 @@
 
 #include <ScriptExtender.h>
 #include <Services/DiscordService.h>
+#include <CrashGuards.h>
 
 // #include <imgui_internal.h>
 
@@ -112,6 +113,8 @@ void TransportService::OnConsume(const void* apData, uint32_t aSize)
 
 void TransportService::OnConnected()
 {
+    CrashGuards::LogClientBuild("connected");
+
     AuthenticationRequest request{};
     request.Version = BUILD_COMMIT;
     request.SKSEActive = IsScriptExtenderLoaded();

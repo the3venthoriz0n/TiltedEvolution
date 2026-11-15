@@ -19,6 +19,7 @@
 #include <Services/DiscordService.h>
 
 #include <NvidiaUtil.h>
+#include <CrashGuards.h>
 
 using TiltedPhoques::Debug;
 
@@ -87,6 +88,8 @@ void* TiltedOnlineApp::GetMainAddress() const
 
 bool TiltedOnlineApp::BeginMain()
 {
+    CrashGuards::LogClientBuild("startup");
+
     World::Create();
     World::Get().ctx().at<DiscordService>().Init();
     World::Get().ctx().emplace<RenderSystemD3D11>(World::Get().ctx().at<OverlayService>(), World::Get().ctx().at<ImguiService>());
