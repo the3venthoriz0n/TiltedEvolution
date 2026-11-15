@@ -57,3 +57,18 @@ TiltedEvolution is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
+
+## Modified version, source and credits
+
+**This is a modified version of Skyrim Together Reborn.** It is not the official release and is not made or endorsed by the Tilted Online / Skyrim Together Reborn team. Do not ask them for support for this build. What changed is listed in [MODIFICATIONS.md](./MODIFICATIONS.md), where the source for a build is found is in [SOURCE.txt](./SOURCE.txt), and the licence is in [LICENSE](./LICENSE) (GPL-3.0-or-later; see also its note on the LGPLv2 launcher component). Upstream: https://github.com/tiltedphoques/TiltedEvolution.
+
+### Credits
+
+- **Tilted Online / Skyrim Together Reborn team** (TiltedPhoques) and all upstream contributors, whose work this is built on. From the upstream git history (`git shortlog -sn`, as of the fork point `54b3a858`), the authors with the most commits are: Robbe Bryssinck, yamashi, Force67, Maxime Griot, Sturle Spetland (also committing as Sturlen), Dragonisser, Daniil Zakharov, Rich Fortier (rfortier), Vincent Hengel, Sebastian Comans (scomans), Shynd (Outshynd), DJLegends, Lee, kulcris and E F, with many more with fewer commits. The full list is in the git history and at https://github.com/tiltedphoques/TiltedEvolution/graphs/contributors. Upstream copyright notices in the source files are kept.
+- **Third-party libraries** (git submodules in `.gitmodules`, and the xmake packages pinned in `xmake.lua`). Each is under its own licence, which applies to it; check the library's own repository for the licence text:
+  - Submodules, all by TiltedPhoques: [TiltedReverse](https://github.com/TiltedPhoques/TiltedReverse), [TiltedUI](https://github.com/TiltedPhoques/TiltedUI), [TiltedConnect](https://github.com/TiltedPhoques/TiltedConnect), [TiltedHooks](https://github.com/TiltedPhoques/TiltedHooks).
+  - Copied into `Libraries/`: cxxopts (Jarryd Beck, MIT licence text in `Libraries/cxxopts.hpp`) and magic_enum.
+  - xmake packages: entt, tiltedcore, cryptopp, spdlog, cpp-httplib, gtest, mem, glm, zlib, and on Windows discord and imgui.
+  - `Code/launcher` is under the LGPLv2 and derives from code by the CitizenFX authors (see `LICENSE`).
+- **Modifications** (potion and poison sync, crash fixes, build and release tooling): the3venthoriz0n, https://github.com/the3venthoriz0n.
+- **AI assistance:** Claude (Anthropic).

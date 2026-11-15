@@ -145,6 +145,16 @@ jobs:
           rm -f str-build/SkyrimTogetherReborn/*.pdb str-build/SkyrimTogetherReborn/*.lib str-build/SkyrimTogetherReborn/*.exp
           rm -f str-build/SkyrimTogetherReborn/*Tests.exe
 
+      # GPL-3.0-or-later: ship the licence text, the list of changes and the source offer with the binaries. They go in
+      # their own folder at the zip root (the zip root is the game's Data folder), away from SkyrimTogether.esp and
+      # SkyrimTogetherReborn/, so nothing the game or STR reads is touched.
+      - name: Add licence, modification notice and source offer
+        run: |
+          docs="str-build/Docs/SkyrimTogetherReborn-potions"
+          mkdir -p "$docs"
+          cp LICENSE MODIFICATIONS.md SOURCE.txt "$docs/"
+          echo "Built from ${GITHUB_REPOSITORY}@${GITHUB_SHA} (https://github.com/${GITHUB_REPOSITORY}/tree/${GITHUB_SHA})" > "$docs/BUILD-COMMIT.txt"
+
       - name: Create Windows release zips
         run: |
           mkdir -p release-assets
@@ -200,10 +210,21 @@ jobs:
           extra=()
           # potions-v1.8.4-1 is a release; potions-v1.8.4-1-test1 (anything after the build number) is a pre-release
           if [[ "$GITHUB_REF_NAME" =~ ^potions-v[0-9]+\.[0-9]+\.[0-9]+-[0-9]+-.+$ ]]; then extra+=(--prerelease); fi
+          source_url="https://github.com/${GITHUB_REPOSITORY}/tree/${GITHUB_SHA}"
+          {
+            echo "Modified build of Skyrim Together Reborn (GPL-3.0-or-later). Not made or endorsed by the upstream authors."
+            echo ""
+            echo "- Corresponding source: ${source_url}"
+            echo "- Upstream project: https://github.com/tiltedphoques/TiltedEvolution"
+            echo "- Changes versus upstream: https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_SHA}/MODIFICATIONS.md"
+            echo "- The zip contains Docs/SkyrimTogetherReborn-potions/ with LICENSE, MODIFICATIONS.md and SOURCE.txt."
+            echo ""
+          } > release-notes.md
           gh release create "$GITHUB_REF_NAME" \
             "release-files/SkyrimTogether-${version}-windows-x64.zip" \
             "release-files/SkyrimTogether-${version}-windows-x64-debug-symbols.zip" \
             --verify-tag \
+            --notes-file release-notes.md \
             --generate-notes \
             --title "Skyrim Together potions ${GITHUB_REF_NAME#potions-v}" \
             "${extra[@]}"

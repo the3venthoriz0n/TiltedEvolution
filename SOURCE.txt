@@ -1,0 +1,34 @@
+Skyrim Together Reborn, modified build (client)
+=====================================================
+
+This is a MODIFIED version of Skyrim Together Reborn (Tilted Online, codename TiltedEvolution).
+It is free software under the GNU General Public License, version 3 or (at your option) any later
+version. The licence text is in the file LICENSE. It comes with NO WARRANTY. The modifications are
+listed in MODIFICATIONS.md. They were made by the3venthoriz0n and are not by, or endorsed by, the
+upstream authors.
+
+Corresponding source code
+-------------------------
+Branch potion-sync-crashfix; a release is built from the tag potions-v<version>-<n> shown on its GitHub release page.
+The exact source of a build is the commit it was built from:
+The release notes of every GitHub release link the exact commit, and the zip contains Docs/SkyrimTogetherReborn-potions/BUILD-COMMIT.txt with it.
+Source: https://github.com/the3venthoriz0n/TiltedEvolution (branch/commit as above; clone it and
+run `git checkout <commit>` then `git submodule update --init --recursive`).
+I will keep this source available for at least as long as I offer these binaries. If you cannot get it
+from that address, open an issue there and I will send it to you.
+
+Upstream project (unmodified source, authors, history):
+https://github.com/tiltedphoques/TiltedEvolution
+This fork diverges from upstream commit 54b3a858 (v1.8.4, 2026-10-22).
+
+Third-party libraries
+---------------------
+The git submodules listed in .gitmodules, built at the commits pinned by this repository:
+  Libraries/TiltedReverse  https://github.com/TiltedPhoques/TiltedReverse
+  Libraries/TiltedUI       https://github.com/TiltedPhoques/TiltedUI
+  Libraries/TiltedConnect  https://github.com/TiltedPhoques/TiltedConnect
+  Libraries/TiltedHooks    https://github.com/TiltedPhoques/TiltedHooks
+(`git submodule status` prints the pinned commits.) Libraries/cxxopts.hpp and
+Libraries/magic_enum.hpp are copied into the tree. Other dependencies (entt, tiltedcore, cryptopp,
+spdlog, cpp-httplib, gtest, mem, glm, zlib, and on Windows discord and imgui) are downloaded by xmake
+at the versions pinned in xmake.lua. Each keeps its own licence; see the README credits.
